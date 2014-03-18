@@ -34,7 +34,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org>
 */
 
-void bin2Base64PlusSlashEquals(uint8_t *in, uint64_t inLen, uint8_t *out);
+void bin2Base64PlusSlashEqualsOneLine(uint8_t *in, uint64_t inLen, uint8_t *out);
   // Basic lookup table going from binary to Base64
   // This Base64 uses the RFC alphabet of a-zA-Z0-9+/    with = padding
   // This Base64 does NOT put anything CR or LF characters in the output (i.e. it's not the full MIME standard)
