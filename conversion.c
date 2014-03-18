@@ -2,12 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "conversion.h"
 
 /*
-Written 2014 by Anti-weakpasswords
-https://github.com/Anti-weakpasswords
-
 This is free and unencumbered software released into the public domain.
 
 Anyone is free to copy, modify, publish, use, compile, sell, or
@@ -34,7 +30,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org>
 */
 
-void bin2Base64PlusSlashEquals(uint8_t *in, uint64_t inLen, uint8_t *out)
+void bin2Base64PlusSlashEqualsOneLine(uint8_t *in, uint64_t inLen, uint8_t *out)
 {
   // Basic lookup table going from binary to Base64
   // This Base64 uses the RFC alphabet of a-zA-Z0-9+/    with = padding
@@ -126,8 +122,9 @@ void bin2Base64PlusSlashEquals(uint8_t *in, uint64_t inLen, uint8_t *out)
   
   setsOfThree = inLen / 3;
   charsLeftOver = inLen % 3;
+  printf("inlen %i  sets %i  leftover %i\n",(int)inLen,(int)setsOfThree,(int)charsLeftOver);fflush;
   
-  for (uint64_t i = 0; i<setsOfThree;i++)
+  for (int i = 0; i<setsOfThree;i++)
     {
     // The leftmost 6 bits of outSet byte 1 is 6 bit unit 1
     // In this case, bit shifting is used exclusively for readability.
@@ -260,7 +257,7 @@ void bin2HexLower(uint8_t *in, uint64_t inLen, uint8_t *out)
     ,0x65 // ASCII e
     ,0x66 // ASCII f
     };
-  for (uint64_t i = 0; i<inLen;i++)
+  for (int i = 0; i<inLen;i++)
     {
     // First hex digit
     out[i*2] = nibbleToHex[(in[i]) >> 4]; // First we take the leftmost four bits - >> is the rightshift operator, and it fills in 0 into the bits that it's replacing, while discarding the bits on the right.
@@ -310,7 +307,7 @@ void bin2HexUpper(uint8_t *in, uint64_t inLen, uint8_t *out)
     ,0x45 // ASCII E
     ,0x46 // ASCII F
     };
-  for (uint64_t i = 0; i<inLen;i++)
+  for (int i = 0; i<inLen;i++)
     {
       out[i*2] = nibbleToHex[(in[i]) >> 4];
       out[i*2+1] = nibbleToHex[(0x0f & in[i])];
@@ -590,7 +587,7 @@ uint8_t hex2Bin(uint8_t *in, uint64_t inLen, uint8_t *out)
   };
   uint8_t isError = 0;
   
-  for (uint64_t i = 0; i<(inLen);i+=2)
+  for (int i = 0; i<(inLen);i+=2)
     {
     // Primitive reasonably close to constant time error check; note that the invalid hex digit will simply end up putting a nibble of 0's in the output string
     //   which also keeps the time close to constant, error or no
@@ -609,3 +606,50 @@ uint8_t hex2Bin(uint8_t *in, uint64_t inLen, uint8_t *out)
   return isError;
 }
 
+int main (int argc, char *argv[])
+{
+  // Code below is a primitive example with almost none of the error and bad data handling you SHOULD have!!!
+  
+  printf("Usage: %s [string to convert TO hex] [hex string to convert TO binary and then convert that binary TO Base64]\n",argv[0]);
+  puts("  The strings do NOT have to be the same.");
+  puts("WARNING: This is mainly just a demonstration of public domain skeleton conversion code - just enough to work in nearly constant time");
+  puts("   for constant length output - i.e. password hashing with a fixed output length and salt size.");
+  char* out;
+  char* outBase64;
+  uint8_t isError;
+  
+  if(argc < 3)
+    {
+    puts("You must enter at least 2 arguments.");
+    return 1;
+    }
+  
+  // Allocate and zero out RAM for the hex output string - 2 hex digits per input byte, plus a trailing \0 to end the string.
+  out = (uint8_t *)calloc((size_t) strlen(argv[1])*2+1,(size_t) 1);
+  
+  bin2HexLower((uint8_t *)argv[1],strlen(argv[1]),(uint8_t *)out);
+  printf("binToHex: %s\n",out);
+  
+  free(out);
+  if (strlen(argv[2]) % 2 != 0)
+    {
+    puts("Hex strings MUST have an even number of characters, i.e. 61 or 5a7A");
+    }
+  // Allocate and zero out RAM for the "binary" output - 2 hex digits per input byte, plus a trailing \0 to end the string.
+  // FOR TRUE BINARY OUTPUT, do NOT include the +1 byte for the trailing \0 - but do NOT treat it as a string then, either!!!
+  out = (uint8_t *)calloc((size_t) strlen(argv[2])/2+1,(size_t) 1);
+  isError = hex2Bin((uint8_t *) argv[2],strlen(argv[2]),(uint8_t *)out);
+  if (isError)
+    {
+      puts("Invalid character found in argument 2, the hex string.  Replaced by a nibble of 0's.");
+    }
+  printf("hex2Bin: %s  \nstrlen: %i  expected result: %i\n",out,strlen(out),(strlen(out)*4)/3+0);
+  
+  // Size is the number of 4 byte sets we'll output, plus one for padding if need be, plus one for a \0 string terminator.
+  outBase64 = (uint8_t *)calloc((size_t) (strlen(out)*4)/3+4+1,(size_t) 1);
+  bin2Base64PlusSlashEqualsOneLine((uint8_t *)out,strlen(out),(uint8_t *)outBase64);
+  puts("ready");fflush;
+  printf("hex2Base64RFCPaddedNoCrlf: %s\n\n",outBase64);
+  
+  return 0;
+}
